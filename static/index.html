@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Debate Arena</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --pro:    #0f7a55;
+    --pro-bg: #e8f7f1;
+    --pro-bd: #9edec6;
+    --con:    #b83b1e;
+    --con-bg: #fdf0ec;
+    --con-bd: #f4b09a;
+    --judge:  #5a3ea1;
+    --judge-bg: #f0ecfc;
+    --judge-bd: #c4b5f4;
+    --bg:     #f8f7f4;
+    --surface:#ffffff;
+    --border: #e2e0db;
+    --text:   #1a1917;
+    --muted:  #6b6963;
+    --radius: 10px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  header p {
+    color: var(--muted);
+    margin-top: 6px;
+    font-size: 15px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    width: 100%;
+    max-width: 760px;
+    margin-bottom: 20px;
+  }
+
+  .setup-grid {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+    align-items: end;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+  }
+  input[type="text"]:focus, select:focus {
+    border-color: #9b8cf0;
+  }
+
+  select { cursor: pointer; }
+
+  button#start-btn {
+    padding: 10px 24px;
+    background: #5a3ea1;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, opacity .15s;
+    align-self: end;
+  }
+  button#start-btn:hover { background: #4a2e91; }
+  button#start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Status bar */
+  #status-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  #status-bar.visible { display: flex; }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+  .dot.live { background: #22c55e; animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* Round header */
+  .round-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+  }
+  .round-header::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Argument bubble */
+  .bubble {
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    border: 1px solid transparent;
+    line-height: 1.65;
+    font-size: 15px;
+  }
+  .bubble .side-tag {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .bubble .side-tag::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .bubble.pro {
+    background: var(--pro-bg);
+    border-color: var(--pro-bd);
+    margin-right: 40px;
+  }
+  .bubble.pro .side-tag { color: var(--pro); }
+  .bubble.pro .side-tag::before { background: var(--pro); }
+
+  .bubble.con {
+    background: var(--con-bg);
+    border-color: var(--con-bd);
+    margin-left: 40px;
+  }
+  .bubble.con .side-tag { color: var(--con); }
+  .bubble.con .side-tag::before { background: var(--con); }
+
+  .bubble.judge {
+    background: var(--judge-bg);
+    border-color: var(--judge-bd);
+    font-family: "Georgia", serif;
+  }
+  .bubble.judge .side-tag { color: var(--judge); }
+  .bubble.judge .side-tag::before { background: var(--judge); }
+
+  .bubble .text { white-space: pre-wrap; }
+  .cursor {
+    display: inline-block;
+    width: 2px; height: 15px;
+    background: var(--muted);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blink .8s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Arena area */
+  #arena {
+    display: none;
+    width: 100%;
+    max-width: 760px;
+  }
+  #arena.visible { display: block; }
+
+  /* Topic display */
+  #topic-display {
+    text-align: center;
+    padding: 14px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+  }
+  #topic-display .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+  #topic-display .topic-text { font-size: 18px; font-weight: 600; margin-top: 4px; }
+
+  /* Sides header */
+  .sides {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .side-pill {
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.3px;
+  }
+  .side-pill.pro { background: var(--pro-bg); color: var(--pro); border: 1px solid var(--pro-bd); }
+  .side-pill.con { background: var(--con-bg); color: var(--con); border: 1px solid var(--con-bd); }
+
+  #transcript-area { margin-bottom: 16px; }
+
+  /* Empty state */
+  #empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* Reset button */
+  #reset-btn {
+    display: none;
+    margin: 0 auto;
+    padding: 8px 20px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  #reset-btn:hover { border-color: #aaa; color: var(--text); }
+  #reset-btn.visible { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚔️ AI Debate Arena</h1>
+  <p>Two agents argue. A judge decides.</p>
+</header>
+
+<!-- Setup card -->
+<div class="card">
+  <div class="setup-grid">
+    <div>
+      <label for="topic-input">Debate topic</label>
+      <input type="text" id="topic-input"
+        placeholder="e.g. AI will replace human creativity"
+        value="AI will replace human creativity"/>
+    </div>
+    <div>
+      <label for="rounds-select">Rounds</label>
+      <select id="rounds-select">
+        <option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+    </div>
+    <button id="start-btn" onclick="startDebate()">Start debate</button>
+  </div>
+</div>
+
+<!-- Status bar -->
+<div id="status-bar">
+  <div class="dot" id="status-dot"></div>
+  <span id="status-text">Starting…</span>
+</div>
+
+<!-- Arena -->
+<div id="arena">
+  <div id="topic-display">
+    <div class="label">Topic</div>
+    <div class="topic-text" id="arena-topic"></div>
+  </div>
+
+  <div class="sides">
+    <div class="side-pill pro">PRO — In favour</div>
+    <div class="side-pill con">CON — Against</div>
+  </div>
+
+  <div id="transcript-area">
+    <div id="empty-state">Debate will appear here once started…</div>
+  </div>
+
+  <button id="reset-btn" onclick="resetDebate()">New debate</button>
+</div>
+
+<script>
+  const API = "";   // same origin; change to "http://localhost:8000" if running separately
+
+  let currentDebateId = null;
+  let currentSide = null;
+  let currentBubble = null;
+  let currentTextEl = null;
+  let currentRound = null;
+
+  async function startDebate() {
+    const topic = document.getElementById("topic-input").value.trim();
+    const numRounds = parseInt(document.getElementById("rounds-select").value);
+    if (!topic) { alert("Please enter a topic."); return; }
+
+    setUIBusy(true);
+    resetArena();
+
+    // 1. Create debate session
+    const res = await fetch(`${API}/debate/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic, num_rounds: numRounds }),
+    });
+
+    if (!res.ok) {
+      alert("Failed to start debate: " + await res.text());
+      setUIBusy(false);
+      return;
+    }
+
+    const { debate_id } = await res.json();
+    currentDebateId = debate_id;
+
+    // Show arena
+    document.getElementById("arena-topic").textContent = topic;
+    document.getElementById("arena").classList.add("visible");
+    document.getElementById("empty-state").style.display = "none";
+    setStatus("live", "Debate in progress…");
+
+    // 2. Open SSE stream
+    const es = new EventSource(`${API}/debate/${debate_id}/stream`);
+
+    es.addEventListener("round_start", e => {
+      const { round, side } = JSON.parse(e.data);
+      currentSide = side;
+      currentRound = round;
+
+      // Add round header if first turn of the round
+      if (side === "PRO") {
+        const header = document.createElement("div");
+        header.className = "round-header";
+        header.textContent = `Round ${round}`;
+        document.getElementById("transcript-area").appendChild(header);
+      }
+
+      // Create bubble
+      currentBubble = document.createElement("div");
+      currentBubble.className = `bubble ${side.toLowerCase()}`;
+
+      const tag = document.createElement("div");
+      tag.className = "side-tag";
+      tag.textContent = side === "PRO" ? "PRO — In favour" : "CON — Against";
+
+      currentTextEl = document.createElement("div");
+      currentTextEl.className = "text";
+
+      const cursor = document.createElement("span");
+      cursor.className = "cursor";
+      cursor.id = "live-cursor";
+
+      currentBubble.appendChild(tag);
+      currentBubble.appendChild(currentTextEl);
+      currentTextEl.appendChild(cursor);
+
+      document.getElementById("transcript-area").appendChild(currentBubble);
+    });
+
+    es.addEventListener("token", e => {
+      const cursor = document.getElementById("live-cursor");
+      if (cursor) cursor.before(document.createTextNode(e.data));
+    });
+
+    es.addEventListener("round_end", () => {
+      const cursor = document.getElementById("live-cursor");
+      if (cursor) cursor.remove();
+      currentBubble = null;
+      currentTextEl = null;
+    });
+
+    es.addEventListener("judge_start", () => {
+      setStatus("live", "Judge is evaluating…");
+
+      const header = document.createElement("div");
+      header.className = "round-header";
+      header.textContent = "Judge's Verdict";
+      document.getElementById("transcript-area").appendChild(header);
+
+      currentBubble = document.createElement("div");
+      currentBubble.className = "bubble judge";
+
+      const tag = document.createElement("div");
+      tag.className = "side-tag";
+      tag.textContent = "JUDGE";
+
+      currentTextEl = document.createElement("div");
+      currentTextEl.className = "text";
+
+      const cursor = document.createElement("span");
+      cursor.className = "cursor";
+      cursor.id = "live-cursor";
+
+      currentBubble.appendChild(tag);
+      currentBubble.appendChild(currentTextEl);
+      currentTextEl.appendChild(cursor);
+      document.getElementById("transcript-area").appendChild(currentBubble);
+    });
+
+    es.addEventListener("verdict_token", e => {
+      const cursor = document.getElementById("live-cursor");
+      if (cursor) cursor.before(document.createTextNode(e.data));
+    });
+
+    es.addEventListener("verdict_end", () => {
+      const cursor = document.getElementById("live-cursor");
+      if (cursor) cursor.remove();
+    });
+
+    es.addEventListener("done", () => {
+      es.close();
+      setStatus("idle", "Debate complete");
+      setUIBusy(false);
+      document.getElementById("reset-btn").classList.add("visible");
+    });
+
+    es.addEventListener("error", e => {
+      es.close();
+      const msg = e.data ? JSON.parse(e.data).message : "Connection error";
+      setStatus("idle", "Error: " + msg);
+      setUIBusy(false);
+    });
+  }
+
+  function setStatus(state, text) {
+    const bar = document.getElementById("status-bar");
+    const dot = document.getElementById("status-dot");
+    const label = document.getElementById("status-text");
+    bar.classList.add("visible");
+    dot.className = state === "live" ? "dot live" : "dot";
+    label.textContent = text;
+  }
+
+  function setUIBusy(busy) {
+    document.getElementById("start-btn").disabled = busy;
+    document.getElementById("topic-input").disabled = busy;
+    document.getElementById("rounds-select").disabled = busy;
+  }
+
+  function resetArena() {
+    document.getElementById("transcript-area").innerHTML =
+      '<div id="empty-state">Debate will appear here once started…</div>';
+    document.getElementById("empty-state").style.display = "block";
+    document.getElementById("reset-btn").classList.remove("visible");
+    document.getElementById("arena").classList.remove("visible");
+    document.getElementById("status-bar").classList.remove("visible");
+  }
+
+  function resetDebate() {
+    resetArena();
+    setUIBusy(false);
+    currentDebateId = null;
+  }
+</script>
+</body>
+</html>
