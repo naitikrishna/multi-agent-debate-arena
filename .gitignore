@@ -1,3 +1,4 @@
+feature-debate-fix
 # Ignore Environment Variables (Crucial for bypass keys error)
 .env
 .env.local
@@ -15,4 +16,23 @@ __pycache__/
 
 # Ignore OS specific files
 .DS_Store
+=======
+# Ignore Environment Variables (Crucial for bypass keys error)
+.env
+.env.local
+
+# Ignore Virtual Environment
+venv/
+.venv/
+env/
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore OS specific files
+.DS_Store
+main
 Thumbs.db
