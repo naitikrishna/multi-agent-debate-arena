@@ -1,7 +1,17 @@
 from groq import Groq
+from dotenv import load_dotenv
 import os
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY", "your-key-here"))
+load_dotenv()
+
+api_key = os.environ.get("GROQ_API_KEY")
+if not api_key:
+    raise ValueError(
+        "GROQ_API_KEY not found. Create a .env file with GROQ_API_KEY=your_key "
+        "or run: export GROQ_API_KEY=your_key"
+    )
+
+client = Groq(api_key=api_key)
 JUDGE_MODEL = "llama-3.3-70b-versatile"
 
 
